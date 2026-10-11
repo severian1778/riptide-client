@@ -18,7 +18,7 @@ to be able to open a terminal and paste commands. That's it.
 
 - A Linux or Mac computer that stays on during market hours
 - About 15 minutes of setup
-- A **token** from Stephen. Ask him. It's a long random string.
+- A **token** from Riptide. Ask them. It's a long random string.
 - (Later, for real trading only:) a KuCoin account and API key
 
 ---
@@ -75,7 +75,7 @@ That's it.
 
 ## Step 2 — Get the code
 
-Stephen sends you a download link or a zip. Unzip it, open a terminal
+Riptide sends you a download link or a zip. Unzip it, open a terminal
 in that folder, or:
 
     git clone https://github.com/severian1778/riptide-client.git
@@ -93,14 +93,14 @@ Open `.env` in a text editor and fill in the values:
 
 ### The token (required, everyone)
 
-    RIPTIDE_API_TOKEN=<paste the token Stephen gave you>
-    RIPTIDE_WS_URL=<ask Stephen — he tells you the server address>
+    RIPTIDE_API_TOKEN=<paste the token Riptide gave you>
+    RIPTIDE_WS_URL=<ask Riptide — they tell you the server address>
     MARKET=futures
     DRY_RUN=true
 
 **Leave DRY_RUN=true.** That is the whole point right now.
 
-### KuCoin keys (only when Stephen says live trading is ready)
+### KuCoin keys (only when Riptide says live trading is ready)
 
 KuCoin keys are how the program places trades on YOUR KuCoin account.
 Until you add them, the program can't touch your account at all.
@@ -134,7 +134,7 @@ Then fill in:
 - Your token and your KuCoin keys live ONLY in your `.env` file on
   YOUR computer. Never in a chat, never in a screenshot, never in git.
 - The `.gitignore` already excludes `.env`. Don't fight it.
-- If your token leaks: tell Stephen — he kills it in seconds.
+- If your token leaks: tell Riptide — they kill it in seconds.
 - If your KuCoin keys leak: delete the key in KuCoin's API Management
   page immediately and make a new one.
 
@@ -218,7 +218,7 @@ This step is optional and read-only — it can't place any orders.
 Not yet. The plan:
 
 1. You run it in dry run for days/weeks. Watch the boxes.
-2. When everyone's comfortable, Stephen tells you the real-trading
+2. When everyone's comfortable, Riptide tells you the real-trading
    version is ready and gives you new instructions.
 3. Only then do you flip `DRY_RUN=false` in `.env` — yourself, on
    purpose, with keys you created yourself.
@@ -234,15 +234,15 @@ Nothing trades real money until you personally flip that switch.
 | `No .env found` | You skipped step 3 | `cp .env.example .env` and fill it in |
 | `RIPTIDE_API_TOKEN not set` | Token missing from `.env` | Open `.env`, paste the token |
 | `Elixir is not installed` | Step 1 not done (or not done in this terminal) | Redo step 1, then close and reopen your terminal |
-| `connected` never appears | Wrong server address, or server is down | Check `RIPTIDE_WS_URL` with Stephen |
-| `unauthorized` or repeated reconnects | Token is wrong or was revoked | Ask Stephen for a new token |
+| `connected` never appears | Wrong server address, or server is down | Check `RIPTIDE_WS_URL` with Riptide |
+| `unauthorized` or repeated reconnects | Token is wrong or was revoked | Ask Riptide for a new token |
 | `elixir --version` shows 1.13 or lower | Your system's Elixir is too old | Do the asdf install from step 1 |
 | KuCoin error 401 or `40K` codes when checking connection | Key, secret, or passphrase is wrong | Re-check `.env`; if the Secret was never saved, make a new key |
 | crashes mentioning KuCoin | KuCoin keys missing from `.env` | Add all three values, or leave them blank (dry run doesn't need them) |
-| Warnings about `mint` security advisories | Dependency checker being loud | Harmless, but tell Stephen |
+| Warnings about `mint` security advisories | Dependency checker being loud | Harmless, but tell Riptide |
 
 Still stuck? Screenshot the terminal output — the whole thing, not just
-the last line — and send it to Stephen.
+the last line — and send it to Riptide.
 
 ---
 
