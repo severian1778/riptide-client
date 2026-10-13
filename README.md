@@ -16,7 +16,8 @@ to be able to open a terminal and paste commands. That's it.
 
 ## What you need
 
-- A Linux or Mac computer that stays on during market hours
+- A computer that stays on during market hours (Linux, Mac, or Windows
+  — see the Windows note in Step 1)
 - About 15 minutes of setup
 - A **token** from Riptide. Ask them. It's a long random string.
 - (Later, for real trading only:) a KuCoin account and API key
@@ -25,25 +26,59 @@ to be able to open a terminal and paste commands. That's it.
 
 ## Step 1 — Install Elixir
 
-Elixir is the language this program is written in. You need version 1.18
-or newer. If you already have it, skip this step. Check with:
+Elixir is the language this program is written in. If you already have
+version 1.18 or newer, skip this step. Check with:
 
     elixir --version
 
-If that says "command not found" or a version below 1.18, install it:
+If that says "command not found" or a version below 1.18, install it.
+
+### Windows
+
+The program is a Linux/Mac program, but Windows runs it fine through
+**WSL** (Windows Subsystem for Linux). You must use WSL — the native
+Windows version of Elixir will NOT work with this program, because the
+startup scripts are Linux scripts.
+
+1. Open **PowerShell as Administrator** (right-click the Start button →
+   "Terminal (Admin)").
+2. Paste this and press Enter:
+
+       wsl --install
+
+3. Restart the computer when it asks. On restart, a window asks you to
+   pick a username and password for Ubuntu. Pick anything, remember it.
+4. A black Ubuntu terminal appears. Everything below in this README —
+   every "open a terminal and paste" step — happens **inside that
+   Ubuntu terminal**, not PowerShell. Open it any time from the Start
+   menu by typing "Ubuntu".
+
+Once you're in the Ubuntu terminal, follow the Ubuntu instructions
+below exactly like a Linux user.
 
 ### Ubuntu / Debian
 
-Copy and paste these blocks one at a time. The first installs some
-tools (you'll be asked for your password):
+Copy and paste these blocks **one at a time**. This first one installs
+the tools needed to build everything (you'll be asked for your password):
 
     sudo apt update
-    sudo apt install -y git curl build-essential autoconf m4 \
-      libncurses-dev libssl-dev libwxgtk3.0-gtk3-dev wx-common
+    sudo apt install -y git curl unzip build-essential autoconf m4 \
+      libncurses-dev libssl-dev libwxgtk3.2-dev libwxgtk-webview3.2-dev \
+      libgl1-mesa-dev libglu1-mesa-dev libpng-dev libssh-dev unixodbc-dev \
+      xsltproc fop libxml2-utils wx-common
 
-The second installs a version manager and then Elixir itself:
+**Note:** older guides say `libwxgtk3.0-gtk3-dev`. On Ubuntu 24.04 and
+Debian 12+ that package no longer exists — it is `libwxgtk3.2-dev` now,
+which is what's written above. If the install says it can't find one of
+the packages, run:
 
-    git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.14.0
+    apt search libwxgtk | grep dev
+
+and install whichever version number it lists instead.
+
+This second one installs the version manager and then Elixir itself:
+
+    git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.20.2
     echo '. "$HOME/.asdf/asdf.sh"' >> ~/.bashrc
     echo '. "$HOME/.asdf/completions/asdf.bash"' >> ~/.bashrc
     source ~/.bashrc
@@ -51,19 +86,35 @@ The second installs a version manager and then Elixir itself:
     asdf plugin add erlang https://github.com/asdf-vm/asdf-erlang.git
     asdf plugin add elixir https://github.com/asdf-vm/asdf-elixir.git
 
-    asdf install erlang 26.2.5
-    asdf install elixir 1.18.3
-    asdf global erlang 26.2.5
-    asdf global elixir 1.18.3
+    asdf install erlang latest
+    asdf install elixir latest
+    asdf set --home erlang latest
+    asdf set --home elixir latest
 
-**Warning:** installing Erlang takes 10–20 minutes. It looks frozen.
-It's not. Let it run.
+(If `asdf set` says "unknown command", your asdf is an older release —
+use `asdf global erlang latest` and `asdf global elixir latest` instead.
+Both do the same thing.)
+
+**Warning:** installing Erlang takes 10–20 minutes and it looks frozen.
+It's not. Let it run. If it stops with a "missing library" error, you
+skipped the first block above — run it, then run `asdf install erlang
+latest` again.
 
 When it's done, check:
 
     elixir --version
 
-You want to see Elixir 1.18.x and OTP 26.
+You want Elixir 1.18 or newer. If Elixir commands crash immediately on
+startup, your Elixir was built for a different Erlang — run:
+
+    erl -version
+
+note the number after "OTP" in the output (e.g. OTP 27), then run:
+
+    asdf install elixir latest-otp-27
+    asdf set --home elixir latest-otp-27
+
+(replace 27 with whatever number you saw).
 
 ### Mac
 
@@ -89,12 +140,22 @@ Copy the example settings file:
 
     cp .env.example .env
 
-Open `.env` in a text editor and fill in the values:
+Open `.env` in a text editor and fill in the values.
+
+**One important rule when editing `.env`: put every value you paste in
+single quotes.** Like this:
+
+    RIPTIDE_API_TOKEN='abc123...long string'
+
+If your password or token contains a `$` (money symbols are common in
+generated passwords), leaving it unquoted breaks the program at startup
+with a confusing error like `unbound variable`. Single quotes prevent
+that. Always use them.
 
 ### The token (required, everyone)
 
-    RIPTIDE_API_TOKEN=<paste the token Riptide gave you>
-    RIPTIDE_WS_URL=<ask Riptide — they tell you the server address>
+    RIPTIDE_API_TOKEN='<paste the token Riptide gave you>'
+    RIPTIDE_WS_URL='<the server address Riptide gives you>'
     MARKET=futures
     DRY_RUN=true
 
@@ -123,11 +184,11 @@ To create them, on the KuCoin website (kucoin.com, log in):
    IMMEDIATELY. The Secret is shown exactly once. If you lose it,
    delete the key and make a new one — there is no recovery.
 
-Then fill in:
+Then fill in, in single quotes:
 
-    KUCOIN_API_KEY=<key>
-    KUCOIN_API_SECRET=<secret>
-    KUCOIN_API_PASSPHRASE=<passphrase>
+    KUCOIN_API_KEY='<key>'
+    KUCOIN_API_SECRET='<secret>'
+    KUCOIN_API_PASSPHRASE='<passphrase>'
 
 ### The rules about keys and tokens
 
@@ -177,22 +238,74 @@ cleanly. Run `./start.sh` again whenever you want it back on.
 
 ---
 
-## Checking your KuCoin connection (optional, only with keys)
+## Peeking inside while it runs (the "console")
 
-If you've added KuCoin keys and want to confirm they work, run:
+The normal way to run this (`./start.sh`) shows you trades, but you
+can't type commands to it. There's a second way to start it that gives
+you an interactive console **with the program running inside it** —
+like having the dashboard and a steering wheel at the same time.
 
-    set -a; source .env; set +a
-    iex -S mix
+**Important: run only ONE at a time.** Don't run `start.sh` and the
+console at the same time — two executors on the same account will fight
+over trades. Stop one before starting the other.
 
-then at the prompt:
+First time only, create the console launcher (paste this whole block):
+
+    cat > start_iex.sh << 'EOF'
+    #!/usr/bin/env bash
+    # Starts the executor with an interactive console.
+    set -euo pipefail
+    cd "$(dirname "$0")"
+
+    if [ ! -f .env ]; then
+      echo "No .env found. Run: cp .env.example .env"
+      exit 1
+    fi
+
+    set -a
+    source .env
+    set +a
+
+    mix deps.get
+    mix compile
+
+    echo "Starting executor with console. Ctrl-C twice to stop."
+    exec iex -S mix run --no-halt
+    EOF
+    chmod +x start_iex.sh
+
+After that, starting the console is just:
+
+    ./start_iex.sh
+
+You'll see the same "Feed: connected" lines, plus a prompt that looks
+like:
+
+    iex(1)>
+
+That prompt is waiting for you to type commands. Type a command, press
+Enter, see the answer.
+
+### Things you can type at the iex> prompt
+
+**Check your KuCoin account works** (needs keys in `.env`, is
+read-only, cannot place orders):
 
     RiptideExecutor.Kucoin.Client.account_overview()
 
-If you see a response with `"code" => "200000"`, the connection works.
-(You'll also see your balance. Don't screenshot it.) Press Ctrl-C twice
-to exit.
+If the answer contains `"code" => "200000"`, the connection works.
+(You'll also see your balance. Don't screenshot it.)
 
-This step is optional and read-only — it can't place any orders.
+**List every check command the client knows.** If you're unsure what
+else you can ask, type this and read the list:
+
+    h RiptideExecutor.Kucoin.Client
+
+Anything listed there can be called the same way:
+`RiptideExecutor.Kucoin.Client.<name>()`.
+
+**Leaving the console:** press Ctrl-C, then press it again. Same as the
+normal mode.
 
 ---
 
@@ -233,7 +346,10 @@ Nothing trades real money until you personally flip that switch.
 |---|---|---|
 | `No .env found` | You skipped step 3 | `cp .env.example .env` and fill it in |
 | `RIPTIDE_API_TOKEN not set` | Token missing from `.env` | Open `.env`, paste the token |
+| `.env: line N: ...: unbound variable` | A `$` in a password being eaten | Put that value in single quotes in `.env` |
 | `Elixir is not installed` | Step 1 not done (or not done in this terminal) | Redo step 1, then close and reopen your terminal |
+| Erlang build says missing `wx-config` or similar | Build libraries missing | Run the first `sudo apt install` block from Step 1, then retry |
+| `Elixir commands crash on startup` | Elixir built for a different Erlang | See the OTP fix in Step 1 (`latest-otp-NN`) |
 | `connected` never appears | Wrong server address, or server is down | Check `RIPTIDE_WS_URL` with Riptide |
 | `unauthorized` or repeated reconnects | Token is wrong or was revoked | Ask Riptide for a new token |
 | `elixir --version` shows 1.13 or lower | Your system's Elixir is too old | Do the asdf install from step 1 |
@@ -248,7 +364,14 @@ the last line — and send it to Riptide.
 
 ## Quick reference
 
-    ./start.sh        # start it
-    Ctrl-C, Ctrl-C    # stop it
-    elixir --version  # check your install
+    ./start.sh         # start it (normal mode)
+    ./start_iex.sh     # start it with the console
+    Ctrl-C, Ctrl-C     # stop it (both modes)
+    elixir --version   # check your install
+
+On the console:
+
+    RiptideExecutor.Kucoin.Client.account_overview()   # KuCoin connection check
+    h RiptideExecutor.Kucoin.Client                    # list all check commands
+
 
