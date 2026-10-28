@@ -661,65 +661,9 @@ Then read the logs. Every important action is logged in full sentences.
 
 ## 13. Appendix: Where the Predictions Come From
 
-The executor is the last mile. The heavy lifting happens on the server,
-in the same codebase. For completeness — and because setting up a full
-node requires it — here is the **critical install information** for the
-data and training side.
+The executor subscribes to Riptide's proprietary API. The heavy lifting happens on the private server,
+The purpose of the client is simply to automated and manage complex trades
 
-### The Idea (the original thesis)
-
-Sometimes the market gets hit by a wave of one-sided, aggressive
-capital. We call this a **toxic event**. The theory: this capital is
-informed. Either someone knows something or someone is being forced —
-either way, the direction of the wave tells you where price wants to go
-next.
-
-We measure toxicity with **VPIN** — every minute, an estimate of what
-fraction of volume was one-sided. An event **opens** when VPIN crosses
-into the top 5% of its recent history, **closes** when it falls back
-below the top 10%, and its **direction** is the sign of the order-flow
-imbalance across the whole event. January 2025 → August 2026 produced
-~9,000 events, roughly 15 per day.
-
-### The model, briefly
-
-For every event, a **Bayesian linear regression** answers: "if I trade
-this direction, what R should I expect, and how sure am I?" It outputs
-a mean and an honest uncertainty — not a single confident number.
-Bayesian was chosen over a neural network because ~9,000 events is a
-small dataset: the Bayesian model starts skeptical, makes evidence
-*earn* influence, computes exact answers in one closed-form solve (no
-training loops, no random seeds), and picks its own complexity
-automatically. On this data size a neural network would memorize noise;
-this cannot.
-
-### Building the dataset (run once, in order, in `iex -S mix` on the server)
-
-```elixir
-# 1. Download 1-minute candles from Binance
-RiptideData.backfill(from_date: ~D[2025-01-01], market_type: "futures")
-RiptideData.backfill(from_date: ~D[2025-01-01], market_type: "spot")
-
-# 2. Compute toxicity metrics for every minute
-RiptideSignals.TOFBackfill.run("BTCUSDT", market_type: "futures")
-RiptideSignals.TOFBackfill.run("BTCUSDT", market_type: "spot")
-
-# 3. Extract toxic events and the VWAP between them
-RiptideSignals.TOFAnchorBackfill.run("BTCUSDT")
-
-# 4. Train and validate
-RiptideAI.TrainingRunner.run()   # fit, validate, save the model
-```
-
-### The stack
-
-- **Postgres** — every candle, every signal, every event. The source
-  of truth.
-- **Elixir** — data collection, feature extraction, simulation, and
-  the executor itself.
-- **Nx** — the math.
-- **Bayesian linear regression** — exact posterior on small data,
-  honest uncertainty.
 
 ---
 
