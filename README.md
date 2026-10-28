@@ -34,7 +34,8 @@ how to get the keys, and what buttons to press.
 10. [Basic Operations — The Command Cheat Sheet](#10-basic-operations--the-command-cheat-sheet)
 11. [Safety Rules the Code Enforces](#11-safety-rules-the-code-enforces)
 12. [When Something Goes Wrong](#12-when-something-goes-wrong)
-13. [Appendix: Where the Predictions Come From](#13-appendix-where-the-predictions-come-from)
+13. [Appendix A: Where the Predictions Come From](#13-appendix-where-the-predictions-come-from)
+14. [Appendix B: Operating the Client](#14-appendix-operating-the-client)
 
 ---
 
@@ -664,6 +665,207 @@ Then read the logs. Every important action is logged in full sentences.
 The executor subscribes to Riptide's proprietary API. The heavy lifting happens on the private server,
 The purpose of the client is simply to automated and manage complex trades
 
+---
+
+## 14. Command Reference — Everything You Can Run
+
+There are two places you run things:
+
+- **From the terminal (bash):** starting, stopping, compiling, testing.
+- **From inside the running program (IEx):** checking status, reading the
+  books, fixing problems. You get into IEx by starting the program with
+  `iex -S mix` — everything you type at the `iex>` prompt goes straight
+  to the live trading system.
+
+---
+
+### 14.1 From the terminal (bash)
+
+| Command | What it does |
+|---|---|
+| `mix deps.get` | Downloads all the libraries the first time |
+| `mix compile` | Builds the code. Run after pulling changes |
+| `iex -S mix` | **Starts the executor.** This is the main command |
+| `mix test` | Runs the automated test suite (safe — uses the fake venue, no money) |
+
+There is nothing else you need from bash. Everything below happens
+inside IEx.
+
+---
+
+### 14.2 Inside IEx — the daily drivers
+
+These are the commands an operator uses every day. Type them at the
+`iex>` prompt and press Enter.
+
+#### See what's happening
+
+```elixir
+# THE dashboard. Heartbeat health + every open trade + progress bars.
+RiptideExecutor.Status.print()
+
+# The scoreboard. All closed trades: wins, losses, total R, total dollars.
+RiptideExecutor.TrackRecord.print()
+```
+
+#### The money questions
+
+```elixir
+# Account balance — perps AND spot, both books, with a grand total.
+RiptideExecutor.Hyperliquid.Venue.print_balance()
+
+# What positions the exchange actually holds right now.
+RiptideExecutor.Hyperliquid.Venue.print_positions()
+
+# Just the numbers, no pretty box (for scripts):
+RiptideExecutor.TrackRecord.summary()
+RiptideExecutor.Hyperliquid.Venue.balance_detail()
+```
+
+#### The detective — run after ANY restart or crash
+
+```elixir
+# Compares the books vs running processes vs the exchange.
+# Closes bookkeeping ghosts, shouts about real orphaned money.
+RiptideExecutor.Reconcile.run()
+```
+
+**Make this a reflex: restart → `Reconcile.run()` → `Status.print()`.**
+
+#### The heartbeat's health
+
+```elixir
+# Is the per-minute price feed alive? nil price / failures = problems.
+RiptideExecutor.MarketFeed.status()
+```
+
+---
+
+### 14.3 Inside IEx — reading the books (Ledger)
+
+Every trade is keyed by `{symbol, market, anchor_timestamp}`. Get keys
+from `Status.print()` or `trade_keys/0`, then plug them in.
+
+```elixir
+# List every trade ever recorded (the keys).
+RiptideExecutor.Ledger.trade_keys()
+
+# List only trades whose books still say OPEN.
+RiptideExecutor.Ledger.open_trades()
+
+# One trade's full record — sizing, outcome, timestamps.
+RiptideExecutor.Ledger.get_trade(key)
+
+# One trade's fills in order: entry → banks → exit.
+RiptideExecutor.Ledger.fills(key)
+
+# One trade's play-by-play: every decision the machine made, in order.
+# THE black-box recorder. Read this first after anything weird.
+RiptideExecutor.Ledger.event_log(key)
+```
+
+Example with a real key:
+
+```elixir
+key = {"BTCUSDT", "futures", "2026-10-28T01:45:00Z"}
+RiptideExecutor.Ledger.event_log(key)
+```
+
+---
+
+### 14.4 Inside IEx — peeking inside a live trade
+
+```elixir
+# The live walk state of one running trade (or {:error, :not_running}).
+RiptideExecutor.ManagedTrade.state(key)
+
+# Which venue adapter is live right now.
+RiptideExecutor.TradeEngine.venue_module()
+```
+
+---
+
+### 14.5 Inside IEx — manual interventions (handle with care)
+
+These place REAL orders when `DRY_RUN=false`. They exist for one
+reason: recovering from the rare case where a trade process died and
+the position needs human hands. **If you're not fixing an incident,
+don't touch these.**
+
+```elixir
+# Close a position by hand (reduce-only market sell of 0.01 BTC):
+{:ok, ref} =
+  RiptideExecutor.Hyperliquid.Venue.place_market(
+    %{side: :sell, qty: 0.01, reduce_only: true, tag: :exit}
+  )
+
+# Check whether that manual order filled, and at what price:
+RiptideExecutor.Hyperliquid.Venue.order_status(ref)
+
+# Place a protective stop by hand (side/qty/trigger to match the position):
+RiptideExecutor.Hyperliquid.Venue.place_stop(
+  %{side: :sell, qty: 0.01, trigger_price: 80750.0, tag: :stop}
+)
+```
+
+After a manual close, **fix the books** so the scoreboard stays honest:
+
+```elixir
+key = {"BTCUSDT", "futures", "2026-10-28T01:45:00Z"}
+
+RiptideExecutor.Ledger.record_fill(key, :stop_exit, %{price: 80885.3, qty: 0.01})
+
+RiptideExecutor.Ledger.close_trade(key, %{
+  total_r: 0.63,
+  ending: :manual_close,
+  closed_at: DateTime.utc_now(),
+  note: "closed by hand after X — one-line reason here"
+})
+```
+
+---
+
+### 14.6 Inside IEx — Hyperliquid diagnostics
+
+You should never need these. They exist for the day something breaks in
+the signing or account plumbing, so whoever is debugging has lights.
+
+```elixir
+# The agent wallet's public address (proves the key loads correctly).
+RiptideExecutor.Hyperliquid.Client.agent_address()
+
+# Raw account state from the exchange (perps).
+RiptideExecutor.Hyperliquid.Client.clearinghouse_state()
+
+# Raw account state (spot book).
+RiptideExecutor.Hyperliquid.Client.spot_clearinghouse_state()
+
+# Are we pointed at testnet or mainnet RIGHT NOW?
+RiptideExecutor.Hyperliquid.Client.testnet?()
+```
+
+---
+
+### 14.7 The operator's daily routine
+
+```text
+Morning:
+  1. iex -S mix                        (if not already running)
+  2. RiptideExecutor.Status.print()    — anything 💀? Oracle alive?
+  3. RiptideExecutor.TrackRecord.print() — how did yesterday do?
+
+After ANY crash or restart:
+  1. RiptideExecutor.Reconcile.run()
+  2. RiptideExecutor.Status.print()
+
+Before walking away from the desk:
+  1. RiptideExecutor.Status.print()    — confirm nothing needs attention
+  2. Ctrl+C, Ctrl+C                     (exchange-side stops stay armed)
+```
+
+That's the whole management surface. If a command isn't in this list,
+it's either internal machinery (the walk uses it, you don't) or a test
+helper — you don't need it to operate the system.
 
 ---
 
