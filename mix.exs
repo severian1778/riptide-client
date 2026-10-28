@@ -23,7 +23,9 @@ defmodule RiptideExecutor.MixProject do
       {:slipstream, "~> 1.1"},
       {:finch, "~> 0.18"},
       {:jason, "~> 1.4"},
-      {:mint, "~> 1.10.2", override: true}
+      {:mint, "~> 1.10.2", override: true},
+      {:ex_keccak, "~> 0.7"},
+      {:ex_secp256k1, "~> 0.7"}
     ]
   end
 end
