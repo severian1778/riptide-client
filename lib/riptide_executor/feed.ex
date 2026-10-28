@@ -132,13 +132,12 @@ defmodule RiptideExecutor.Feed do
 
     Logger.info("Feed: connected to central server")
 
-    # Join BOTH books: the configured market's topic AND the spot
-    # topic. Spot ladders carry market_type "spot" and are executed
-    # on futures like every other trade (spot is an ANCHOR source,
-    # not a venue). Joining both unconditionally means pickup never
-    # depends on which topic the server chooses to publish on.
-    {:ok, socket} = join(socket, "predictions:" <> market, %{})
-    {:ok, socket} = join(socket, "predictions:spot", %{})
+    # join/2 RETURNS the socket — it does not return {:ok, socket}.
+    # The original single-join code was {:ok, join(socket, ...)} for
+    # exactly this reason. Chain both joins through the socket and
+    # return {:ok, socket} once, at the end.
+    socket = join(socket, "predictions:" <> market, %{})
+    socket = join(socket, "predictions:spot", %{})
 
     {:ok, socket}
   end

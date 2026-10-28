@@ -12,7 +12,6 @@ defmodule RiptideExecutor do
   """
 
   alias RiptideExecutor.{
-    Hyperliquid.Venue,
     Ledger,
     ManagedTrade,
     MarketFeed,
