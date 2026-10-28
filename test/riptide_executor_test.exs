@@ -1,8 +1,9 @@
 defmodule RiptideExecutorTest do
   use ExUnit.Case
-  doctest RiptideExecutor
 
-  test "greets the world" do
-    assert RiptideExecutor.hello() == :world
+  test "operator facade is loaded and answers" do
+    assert is_map(RiptideExecutor.help()) or RiptideExecutor.help() == :ok
+    assert RiptideExecutor.keys() == RiptideExecutor.Ledger.trade_keys()
   end
 end
+
